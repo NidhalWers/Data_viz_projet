@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import math
 
 from functools import wraps
 
@@ -32,7 +33,10 @@ def finished_log():
 
 st.title("this is the dashboard of the project")
 
-if st.sidebar.button("2020 mutations"):
+
+df = None
+####2020
+if st.sidebar.checkbox("2020 mutations"):
     st.subheader("2020 mutations")
 
     file_path = "part2020_sample.csv"
@@ -43,8 +47,39 @@ if st.sidebar.button("2020 mutations"):
 
     df = read_file(file_path)
 
+#####2019
+elif st.sidebar.checkbox("2019 mutations"):
+    st.subheader("2019 mutations")
+
+    file_path = "part2019_sample.csv"
+
+    @log_time
+    def read_file(file_path):
+        return pd.read_csv(file_path, delimiter=',', low_memory=False, header=None)
+
+    df = read_file(file_path)
+    dfBase = pd.read_csv("part2020_sample.csv", delimiter=',', low_memory=False)
+    df.columns = dfBase.columns
+
+####2018
+elif st.sidebar.checkbox("2018 mutations"):
+    st.subheader("2018 mutations")
+
+    file_path = "part2018_sample.csv"
+
+    @log_time
+    def read_file(file_path):
+        return pd.read_csv(file_path, delimiter=',', low_memory=False, header=None)
+
+    df = read_file(file_path)
+    dfBase = pd.read_csv("part2020_sample.csv", delimiter=',', low_memory=False)
+    df.columns = dfBase.columns
+
+
+if st.button("explore data"):
+
     st.write(df.astype(str).head(5))
-#######
+    #######
 
     st.subheader("Data transformation")
 
@@ -99,7 +134,7 @@ if st.sidebar.button("2020 mutations"):
     st.expander("data grouped by 'nom commune'").write(df_gb_nom_commune.head(5))
 
 
-######
+    ######
     st.subheader("Visual representation")
 
 
@@ -167,6 +202,19 @@ if st.sidebar.button("2020 mutations"):
 
     figure = plot_nbroom_value(data)
     st.expander("plot nb room - value").write(figure)
+
+
+
+    map_data = pd.DataFrame([df.longitude, df.latitude]).transpose()
+    st.write(map_data.head(3))
+
+
+
+    st.write("line chart : surface réelle bati")
+    st.line_chart(df["surface_reelle_bati"])
+
+    st.write("map")
+    st.map(map_data)
 
 
 
