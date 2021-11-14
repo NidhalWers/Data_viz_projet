@@ -35,6 +35,8 @@ st.title("this is the dashboard of the project")
 
 
 df = None
+
+
 ####2020
 if st.sidebar.checkbox("2020 mutations"):
     st.subheader("2020 mutations")
@@ -47,8 +49,9 @@ if st.sidebar.checkbox("2020 mutations"):
 
     df = read_file(file_path)
 
+
 #####2019
-elif st.sidebar.checkbox("2019 mutations"):
+if st.sidebar.checkbox("2019 mutations"):
     st.subheader("2019 mutations")
 
     file_path = "part2019_sample.csv"
@@ -74,6 +77,19 @@ elif st.sidebar.checkbox("2018 mutations"):
     df = read_file(file_path)
     dfBase = pd.read_csv("part2020_sample.csv", delimiter=',', low_memory=False)
     df.columns = dfBase.columns
+
+####2020
+else :#st.sidebar.checkbox("2020 mutations"):
+    st.subheader("2020 mutations")
+
+    file_path = "part2020_sample.csv"
+
+    @log_time
+    def read_file(file_path):
+        return pd.read_csv(file_path, delimiter=',', low_memory=False)
+
+    df = read_file(file_path)
+
 
 
 #prepare sample
@@ -129,121 +145,121 @@ df_gb_nom_commune = group_by_nom_commune(df)
 
 
 
-if st.button("explore data"):
-
-    st.write(df.astype(str).head(5))
-    #######
-
-    st.subheader("Data transformation")
 
 
-    #prepare sample
-    st.expander("dropping unused columns") .write(df.head(5))
+st.write(df.astype(str).head(5))
+#######
+
+st.subheader("Data transformation")
 
 
-    #map to datetime
-    st.expander("Dataframe after the to_datetime mapping").write(df.head(5))
+#prepare sample
+st.expander("dropping unused columns") .write(df.head(5))
 
 
-    #add column month
-    st.expander("dataframe after adding month column").write(df.head(5))
+#map to datetime
+st.expander("Dataframe after the to_datetime mapping").write(df.head(5))
 
 
-    #
-    st.expander("data grouped by 'nom commune'").write(df_gb_nom_commune.head(5))
+#add column month
+st.expander("dataframe after adding month column").write(df.head(5))
 
 
-    ######
-    st.subheader("Visual representation")
+#
+st.expander("data grouped by 'nom commune'").write(df_gb_nom_commune.head(5))
 
 
-    # On observe le nombre de mutation par type de local
-
-    @log_time
-    def plot_frequency_by_local_type(dataframe):
-        figure = plt.figure()
-        x = ["Appartement","Dépendance", "Local industriel.\ncommercial\nassimilé", "Maison"]
-        y = dataframe.groupby("type_local").apply(count_rows)
-        plt.pie(y, labels=x)
-        return figure
-
-    figure = plot_frequency_by_local_type(df)
-    st.expander("Frequency by type local").write(figure)
+######
+st.subheader("Visual representation")
 
 
+# On observe le nombre de mutation par type de local
 
+@log_time
+def plot_frequency_by_local_type(dataframe):
+    figure = plt.figure()
+    x = ["Appartement","Dépendance", "Local industriel.\ncommercial\nassimilé", "Maison"]
+    y = dataframe.groupby("type_local").apply(count_rows)
+    plt.pie(y, labels=x)
+    return figure
 
-    #on voit quel mois on a le plus de vente
-    #def bar_group_by_month(dataframe):
-    @log_time
-    def plot_bar_month_mutation(dataframe):
-        figure = plt.figure()
-        y = dataframe.groupby("month_mutation").apply(count_rows)
-        plt.bar(range(1,13),y)
-        return figure
-
-    figure = plot_bar_month_mutation(df)
-    st.expander("number of mutation by month").write(figure)
-
-
-    # On observe la fréquence de transactions en fonction du nombre de pièce
-    @log_time
-    def hist_mutation_nb_piede(dataframe):
-        figure, ax = plt.subplots()
-        ax.hist(dataframe['nombre_pieces_principales'], bins=10, range=(0,10))
-        plt.xlabel("nb pièce")
-        plt.ylabel("Frequency")
-        return figure
-
-    figure = hist_mutation_nb_piede(df)
-    st.expander("number of mutation for each number of room").write(figure)
+figure = plot_frequency_by_local_type(df)
+st.expander("Frequency by type local").write(figure)
 
 
 
 
+#on voit quel mois on a le plus de vente
+#def bar_group_by_month(dataframe):
+@log_time
+def plot_bar_month_mutation(dataframe):
+    figure = plt.figure()
+    y = dataframe.groupby("month_mutation").apply(count_rows)
+    plt.bar(range(1,13),y)
+    return figure
 
-    # On observe la valeur foncière minimale par nombre de piece principales
-    @log_time
-    def value_nb_room(dataframe):
-        data_gb_nbpiece = dataframe.groupby("nombre_pieces_principales").agg({"valeur_fonciere":"min"})
-        return  data_gb_nbpiece
-
-    data = value_nb_room(df)
-    st.expander("data grouped by nb room").write(data.head(55))
-
-    @log_time
-    def plot_nbroom_value(data):
-        figure = plt.figure()
-        plt.plot(data)
-        return figure
-
-    figure = plot_nbroom_value(data)
-    st.expander("plot nb room - value").write(figure)
+figure = plot_bar_month_mutation(df)
+st.expander("number of mutation by month").write(figure)
 
 
+# On observe la fréquence de transactions en fonction du nombre de pièce
+@log_time
+def hist_mutation_nb_piede(dataframe):
+    figure, ax = plt.subplots()
+    ax.hist(dataframe['nombre_pieces_principales'], bins=10, range=(0,10))
+    plt.xlabel("nb pièce")
+    plt.ylabel("Frequency")
+    return figure
 
-    map_data = pd.DataFrame([df.longitude, df.latitude]).transpose()
-    df['longitude'] = df['longitude'].astype(float)
-    df['latitude'] = df['latitude'].astype(float)
-    map1 = pd.DataFrame()
-    map1["lon"] = df["longitude"]
-    map1["lat"] = df["latitude"]
-    st.map(map1)
-
-    st.write(map_data.head(3))
+figure = hist_mutation_nb_piede(df)
+st.expander("number of mutation for each number of room").write(figure)
 
 
 
-    st.write("line chart : surface réelle bati")
-    st.line_chart(df["surface_reelle_bati"])
 
 
-    st.write("map")
-    #st.map(map_data)
+# On observe la valeur foncière minimale par nombre de piece principales
+@log_time
+def value_nb_room(dataframe):
+    data_gb_nbpiece = dataframe.groupby("nombre_pieces_principales").agg({"valeur_fonciere":"min"})
+    return  data_gb_nbpiece
+
+data = value_nb_room(df)
+st.expander("data grouped by nb room").write(data.head(55))
+
+@log_time
+def plot_nbroom_value(data):
+    figure = plt.figure()
+    plt.plot(data)
+    return figure
+
+figure = plot_nbroom_value(data)
+st.expander("plot nb room - value").write(figure)
+
+
+#@st.cache(suppress_st_warning=True)
+def map_dpt():
+    DPT = st.text_input('entrer le département que vous cherchez :', '')
+    map = df.mask(df["code_departement"] != DPT)
+
+    map.dropna(subset=["latitude"], inplace=True)
+    map.dropna(subset=["longitude"], inplace=True)
+
+    st.map(map)
+
+st.write("map selon le département")
+map_dpt()
+
+st.write("line chart : surface réelle bati")
+st.line_chart(df["surface_reelle_bati"])
+
+
+
+#st.map(map_data)
 
 
 def slider(dataframe):
-    x = st.select_slider("valeur minimale des mutations en fonction du mois", options=[1,2,3,4,5,6,7,8,9,10,11,12])
+    x = st.select_slider("somme des valeurs des mutations en fonction du mois", options=[1,2,3,4,5,6,7,8,9,10,11,12])
     mois = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Aout","Septembre","Octobre","Novembre","Décembre"]
     st.write("la somme des valeur de mutation du mois de ",mois[x-1]," est : ", dataframe.valeur_fonciere[x])#dataframe["valeur_fonciere"][x-1])
 
