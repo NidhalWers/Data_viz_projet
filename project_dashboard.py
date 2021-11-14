@@ -76,6 +76,59 @@ elif st.sidebar.checkbox("2018 mutations"):
     df.columns = dfBase.columns
 
 
+#prepare sample
+@log_time
+@st.cache(suppress_st_warning=True, allow_output_mutation=True)
+def prepare_sample(dataframe):
+    first_sample = dataframe.sample(n=100000)
+    #st.write(first_sample.head(5))
+    first_sample.drop(['nature_culture_speciale', 'code_nature_culture_speciale', "code_nature_culture", "code_type_local", "nombre_lots", "lot5_surface_carrez", "lot5_numero", "lot4_surface_carrez", "lot4_numero", "lot3_surface_carrez", "lot3_numero", "lot2_surface_carrez", "lot2_numero", "lot1_surface_carrez", "lot1_numero", "numero_volume", "ancien_id_parcelle", "id_parcelle", "ancien_nom_commune", "ancien_code_commune"], axis=1, inplace=True)
+    return first_sample
+
+df = prepare_sample(df)
+
+
+#map to datetime
+@log_time
+@st.cache(suppress_st_warning=True, allow_output_mutation=True)
+def map_to_datetime(dataframe):
+    dataframe["date_mutation"] = dataframe["date_mutation"].map(pd.to_datetime)
+    return dataframe
+
+df = map_to_datetime(df)
+
+
+
+#add column month
+def get_month(dt):
+    return dt.month
+
+
+@log_time
+@st.cache(suppress_st_warning=True, allow_output_mutation=True)
+def add_column_month(dataframe):
+    dataframe["month_mutation"] = dataframe["date_mutation"].map(get_month)
+    return dataframe
+
+df = add_column_month(df)
+
+
+# group by nom commune
+def count_rows(rows):
+    return len(rows)
+
+
+@log_time
+@st.cache(suppress_st_warning=True, allow_output_mutation=True)
+def group_by_nom_commune(dataframe):
+    dataframe.groupby("nom_commune").apply(count_rows)
+    return dataframe
+
+
+df_gb_nom_commune = group_by_nom_commune(df)
+
+
+
 if st.button("explore data"):
 
     st.write(df.astype(str).head(5))
@@ -84,53 +137,19 @@ if st.button("explore data"):
     st.subheader("Data transformation")
 
 
-    @log_time
-    @st.cache(suppress_st_warning=True, allow_output_mutation=True)
-    def prepare_sample(dataframe):
-        first_sample = dataframe.sample(n=100000)
-        #st.write(first_sample.head(5))
-        first_sample.drop(['nature_culture_speciale', 'code_nature_culture_speciale', "code_nature_culture", "code_type_local", "nombre_lots", "lot5_surface_carrez", "lot5_numero", "lot4_surface_carrez", "lot4_numero", "lot3_surface_carrez", "lot3_numero", "lot2_surface_carrez", "lot2_numero", "lot1_surface_carrez", "lot1_numero", "numero_volume", "ancien_id_parcelle", "id_parcelle", "ancien_nom_commune", "ancien_code_commune"], axis=1, inplace=True)
-        return first_sample
-
-    df = prepare_sample(df)
+    #prepare sample
     st.expander("dropping unused columns") .write(df.head(5))
 
 
-    @log_time
-    @st.cache(suppress_st_warning=True, allow_output_mutation=True)
-    def map_to_datetime(dataframe):
-        dataframe["date_mutation"] = dataframe["date_mutation"].map(pd.to_datetime)
-        return dataframe
-
-    df = map_to_datetime(df)
+    #map to datetime
     st.expander("Dataframe after the to_datetime mapping").write(df.head(5))
 
 
-    def get_month(dt):
-        return dt.month
-
-    @log_time
-    @st.cache(suppress_st_warning=True, allow_output_mutation=True)
-    def add_column_month(dataframe):
-        dataframe["month_mutation"] = dataframe["date_mutation"].map(get_month)
-        return dataframe
-
-    df = add_column_month(df)
+    #add column month
     st.expander("dataframe after adding month column").write(df.head(5))
 
 
-
-    def count_rows(rows):
-        return len(rows)
-
-
-    @log_time
-    @st.cache(suppress_st_warning=True, allow_output_mutation=True)
-    def group_by_nom_commune(dataframe):
-        dataframe.groupby("nom_commune").apply(count_rows)
-        return dataframe
-
-    df_gb_nom_commune = group_by_nom_commune(df)
+    #
     st.expander("data grouped by 'nom commune'").write(df_gb_nom_commune.head(5))
 
 
@@ -165,8 +184,6 @@ if st.button("explore data"):
 
     figure = plot_bar_month_mutation(df)
     st.expander("number of mutation by month").write(figure)
-
-
 
 
     # On observe la fréquence de transactions en fonction du nombre de pièce
@@ -206,6 +223,13 @@ if st.button("explore data"):
 
 
     map_data = pd.DataFrame([df.longitude, df.latitude]).transpose()
+    df['longitude'] = df['longitude'].astype(float)
+    df['latitude'] = df['latitude'].astype(float)
+    map1 = pd.DataFrame()
+    map1["lon"] = df["longitude"]
+    map1["lat"] = df["latitude"]
+    st.map(map1)
+
     st.write(map_data.head(3))
 
 
@@ -213,8 +237,17 @@ if st.button("explore data"):
     st.write("line chart : surface réelle bati")
     st.line_chart(df["surface_reelle_bati"])
 
+
     st.write("map")
-    st.map(map_data)
+    #st.map(map_data)
 
 
+def slider(dataframe):
+    x = st.select_slider("valeur minimale des mutations en fonction du mois", options=[1,2,3,4,5,6,7,8,9,10,11,12])
+    mois = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Aout","Septembre","Octobre","Novembre","Décembre"]
+    st.write("la somme des valeur de mutation du mois de ",mois[x-1]," est : ", dataframe.valeur_fonciere[x])#dataframe["valeur_fonciere"][x-1])
+
+
+y = df.groupby("month_mutation").agg({"valeur_fonciere": "sum"})
+slider(y)
 
